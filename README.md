@@ -1,58 +1,49 @@
-# Userbot TG API — установка одной командой
+# Userbot TG API (одна команда установки)
 
-## Установка (2 способа)
-
-**Способ 1 (рекомендуемый):**
+## Установка
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/kalininlive/Userbot-TG-Installer/main/install.sh)
-```
+В инсталлере укажи IP(ы) сервера n8n — он пропишет ALLOW_IPS и настроит UFW.
 
-**Способ 2 (если оболочка не поддерживает `<(...)`):**
-```bash
-curl -fsSL https://raw.githubusercontent.com/kalininlive/Userbot-TG-Installer/main/install.sh | bash
-```
+Синонимы параметров (middleware)
+API принимает взаимозаменяемые поля:
 
-В инсталлере укажи IP(ы) сервера n8n — он пропишет `ALLOW_IPS`, настроит UFW и предложит
-сразу запустить мастер QR-авторизации (ввод `api_id`, `api_hash`, `name` и показ QR в логах).
-Если откажешься — авторизацию всегда можно пройти позже: `/opt/tgapi/scripts/qr_wizard.sh`.
+Адресат: chat | channel | peer
 
----
+@username или t.me/... → трактуется как канал
 
-## Синонимы параметров (middleware)
+me, -100<ID>, числовой id → трактуется как peer
 
-API понимает взаимозаменяемые поля:
+Текст: text | message (оба эквивалентны)
 
-- **Адресат:** `chat` | `channel` | `peer`  
-  `@username` или `t.me/...` → трактуется как **канал**;  
-  `me`, `-100<ID>`, числовой id → трактуется как **peer**.
-- **Текст:** `text` | `message` (оба эквивалентны)
+Примеры
+Чтение:
 
-### Примеры
-
-**Чтение:**
-```http
+pgsql
+Копировать код
 GET /messages?name=<acc>&chat=@n8n_community&limit=10
 GET /messages?name=<acc>&chat=-1001481574785&limit=10
-```
+Отправка:
 
-**Отправка:**
-```http
+perl
+Копировать код
 POST /send
 {
   "name": "<acc>",
-  "chat": "me",          // можно peer или channel
+  "chat": "me",         // можно peer или channel
   "text": "hello"
 }
-```
+Полезные команды
+Статус: curl -sS http://127.0.0.1:3000/health
 
----
+Токен: grep ^API_TOKEN= /opt/tgapi/.env
 
-## Полезные команды
+Логи: pm2 logs tgapi
 
-- Статус: `curl -sS http://127.0.0.1:3000/health`
-- Токен:  `grep ^API_TOKEN= /opt/tgapi/.env`
-- Логи:   `pm2 logs tgapi`
-- Рестарт: `pm2 restart tgapi --update-env`
-- Обновление: `/opt/tgapi/scripts/update.sh`
-- Сессии: `find /opt/tgapi/sessions -maxdepth 1 -name "*.session" -printf "%f\n" | sed 's/\.session$//'`
-- Удаление: `/opt/tgapi/scripts/uninstall.sh`
+Рестарт:pm2 restart tgapi --update-env
+
+Обновл.:/opt/tgapi/scripts/update.sh
+
+Сессии: find /opt/tgapi/sessions -maxdepth 1 -name "*.session" -printf "%f\n" | sed 's/\.session$//'
+
+Удалить:/opt/tgapi/scripts/uninstall.sh

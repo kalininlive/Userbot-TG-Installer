@@ -33,8 +33,8 @@ if [ ! -f "$APP_DIR/.env" ]; then
   API_TOKEN=$(openssl rand -hex 24)
   cat > "$APP_DIR/.env" <<ENV
 PORT=3000
-API_TOKEN=\${API_TOKEN}
-SESSIONS_DIR=\${APP_DIR}/sessions
+API_TOKEN=${API_TOKEN}
+SESSIONS_DIR=${APP_DIR}/sessions
 LOG_LEVEL=info
 ACCESS_MODE=ip
 ALLOW_IPS=
@@ -45,8 +45,8 @@ fi
 # Спросим IP(ы) n8n (через запятую) и добавим в ALLOW_IPS
 if grep -q '^ALLOW_IPS=$' "$APP_DIR/.env" || ! grep -q '^ALLOW_IPS=' "$APP_DIR/.env"; then
   read -rp "IP(ы) n8n, которым разрешён доступ (через запятую): " ALLOW
-  ALLOW=\${ALLOW// /}
-  sed -i "s|^ALLOW_IPS=.*|ALLOW_IPS=127.0.0.1,\${ALLOW}|" "$APP_DIR/.env"
+  ALLOW=${ALLOW// /}
+  sed -i "s|^ALLOW_IPS=.*|ALLOW_IPS=127.0.0.1,${ALLOW}|" "$APP_DIR/.env"
 fi
 
 echo "==> PM2 старт"
