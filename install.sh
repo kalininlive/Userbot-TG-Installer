@@ -8,10 +8,10 @@ NODE_MAJOR="${NODE_MAJOR:-20}"
 
 echo "==> Установка пакетов"
 apt-get -yq update
-apt-get -yq install ca-certificates curl git gnupg build-essential ufw
+apt-get -yq install ca-certificates curl git gnupg build-essential ufw dnsutils
 
 echo "==> Node.js и PM2"
-curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -
+curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
 apt-get -yq install nodejs
 npm i -g pm2
 
@@ -55,18 +55,44 @@ pm2 save
 pm2 startup -u root --hp /root >/tmp/pm2_startup.txt || true
 cat /tmp/pm2_startup.txt || true
 
-echo "==> UFW (SSH + 3000 только для первого IP из ALLOW_IPS)"
+# === UFW: строгий доступ к 3000 только с IP из ALLOW_IPS (ALLOW выше DENY) ===
+echo "==> UFW (SSH открыт; 3000 только для ALLOW_IPS в правильном порядке)"
+
+# 0) Оставляем SSH
 ufw allow OpenSSH || true
-FIRST_IP="$(grep '^ALLOW_IPS=' "$APP_DIR/.env" | cut -d= -f2 | tr -d ' ' | tr ',' '\n' | sed -n '2p')"
-if [[ -n "$FIRST_IP" ]]; then
-  ufw allow from "$FIRST_IP" to any port 3000 proto tcp || true
+
+# 1) Собираем уникальные IPv4 из ALLOW_IPS (без пробелов)
+ALLOW_LINE="$(grep '^ALLOW_IPS=' "$APP_DIR/.env" | cut -d= -f2- | tr -d ' ')"
+ALLOW_LIST="$(printf '%s\n' "$ALLOW_LINE" | tr ',' ' ' | xargs -n1 | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | sort -u)"
+
+# 2) Удаляем все старые правила про 3000/tcp, чтобы порядок не испортился
+if ufw status numbered | grep -q '3000/tcp'; then
+  while :; do
+    NUM=$(ufw status numbered | awk '/3000\/tcp/{print $1}' | tr -d '[]' | sort -nr | head -n1)
+    [ -n "$NUM" ] || break
+    ufw delete "$NUM" || true
+  done
 fi
-ufw deny 3000/tcp || true
+
+# 3) Добавляем ALLOW для каждого IP n8n ПЕРЕД DENY
+if [ -n "$ALLOW_LIST" ]; then
+  for IP in $ALLOW_LIST; do
+    ufw insert 1 allow from "$IP" to any port 3000 proto tcp || true
+  done
+else
+  echo "⚠️  ALLOW_IPS пуст — порт 3000 будет закрыт для внешних! (работает только локально)"
+fi
+
+# 4) Добавляем общий DENY для 3000/tcp СРАЗУ ПОСЛЕ allow-правил
+DENY_POS=$(( $(echo "$ALLOW_LIST" | wc -w) + 1 ))
+ufw insert "$DENY_POS" deny 3000/tcp || ufw deny 3000/tcp
+
+# 5) Включаем UFW (если не включён) и печатаем правила
 yes | ufw enable || true
 ufw status verbose || true
 
 echo "==> Проверка здоровья"
-for i in {1..10}; do
+for i in {1..12}; do
   if curl -fsS "http://127.0.0.1:3000/health" >/dev/null; then
     echo "API жив: http://127.0.0.1:3000/health"
     break
