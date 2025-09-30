@@ -3,6 +3,7 @@
 ## Установка
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/kalininlive/Userbot-TG-Installer/main/install.sh)
+```
 В инсталлере укажи IP(ы) сервера n8n — он пропишет ALLOW_IPS и настроит UFW.
 
 Синонимы параметров (middleware)
